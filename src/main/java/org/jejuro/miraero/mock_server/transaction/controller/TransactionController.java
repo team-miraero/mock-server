@@ -1,12 +1,15 @@
 package org.jejuro.miraero.mock_server.transaction.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.jejuro.miraero.mock_server.transaction.dto.request.TransferRequest;
 import org.jejuro.miraero.mock_server.transaction.dto.response.TransactionResponse;
+import org.jejuro.miraero.mock_server.transaction.dto.response.TransferResponse;
 import org.jejuro.miraero.mock_server.transaction.service.TransactionService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -37,5 +40,13 @@ public class TransactionController {
                                 .categoryName(t.getCategoryName())
                                 .build()
                 ).toList();
+    }
+
+    @PostMapping("/transfers")
+    public ResponseEntity<TransferResponse> transfer(@Valid @RequestBody TransferRequest req) {
+        TransferResponse response = service.transfer(req);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 }
