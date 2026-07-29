@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jejuro.miraero.mock_server.transaction.mapper.TransactionMapper">
+    <select id="findTransactions"
+            resultType="Transaction">
+        SELECT transaction_id,
+               kb_user_id,
+               account_id,
+               card_id,
+               prepaid_instrument_id,
+               transaction_type,
+               amount,
+               balance_after,
+               transacted_at,
+               merchant_name,
+               category_name
+        FROM transaction
+        WHERE kb_user_id = #{kbUserId}
+    </select>
+</mapper>
