@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jejuro.miraero.mock_server.loan.mapper.LoanMapper">
+    <select id="findLoans"
+            resultType="Loan">
+        SELECT loan_id,
+               kb_user_id,
+               loan_name,
+               loan_amount,
+               remaining_amount,
+               interest_rate,
+               loan_start_date,
+               maturity_date
+        FROM loan
+        WHERE kb_user_id = #{kbUserId}
+    </select>
+</mapper>
