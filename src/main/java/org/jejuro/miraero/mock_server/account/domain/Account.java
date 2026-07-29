@@ -2,7 +2,8 @@ package org.jejuro.miraero.mock_server.account.domain;
 
 
 import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import org.apache.ibatis.type.Alias;
 
 import java.math.BigDecimal;
@@ -10,7 +11,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
-@Setter
+@NoArgsConstructor
+@ToString
 @Alias("Account")
 public class Account {
     private Long accountId;

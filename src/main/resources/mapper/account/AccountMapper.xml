@@ -15,7 +15,7 @@
                maturity_at,
                interest_rate,
                monthly_payment_limit
-        FROM mock_account
+        FROM account
         WHERE kb_user_id = #{kbUserId}
     </select>
 
