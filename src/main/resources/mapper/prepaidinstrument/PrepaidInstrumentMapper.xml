@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.jejuro.miraero.mock_server.prepaidinstrument.mapper.PrepaidInstrumentMapper">
+    <select id="findPrepaidInstruments"
+            resultType="PrepaidInstrument">
+        SELECT prepaid_instrument_id,
+               kb_user_id,
+               prepaid_instrument_name,
+               prepaid_instrument_type,
+               financial_institution_code
+        FROM prepaid_instrument
+        WHERE kb_user_id = #{kbUserId}
+    </select>
+</mapper>
