@@ -19,5 +19,33 @@
         WHERE kb_user_id = #{kbUserId}
     </select>
 
+    <select id="findById" resultType="Account">
+        SELECT account_id,
+               kb_user_id,
+               financial_institution_code,
+               account_type,
+               account_name,
+               account_number,
+               balance,
+               account_status,
+               opened_at,
+               maturity_at,
+               interest_rate,
+               monthly_payment_limit
+        FROM account
+        WHERE account_id = #{accountId}
+    </select>
+
+    <update id="decreaseBalance">
+        UPDATE account
+        SET balance = balance - #{amount}
+        WHERE account_id = #{accountId}
+    </update>
+
+    <update id="increaseBalance">
+        UPDATE account
+        SET balance = balance + #{amount}
+        WHERE account_id = #{accountId}
+    </update>
 
 </mapper>

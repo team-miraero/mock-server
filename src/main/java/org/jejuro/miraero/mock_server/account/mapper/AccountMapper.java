@@ -13,4 +13,20 @@ public interface AccountMapper {
     List<Account> findAccounts(
             @Param("kbUserId") Long kbUserId
     );
+
+    Account findById(
+            @Param("accountId") Long accountId
+    );
+
+    void decreaseBalance(
+            @Param("accountId") Long accountId,
+            @Param("amount") Long amount
+    );
+
+    void increaseBalance(
+            @Param("accountId") Long accountId,
+            @Param("amount") Long amount
+    );
+
+
 }
