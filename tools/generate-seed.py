@@ -1,35 +1,39 @@
 #!/usr/bin/env python3
 """
-generate-seed.py — Task M1 목 금융 데이터(`transaction` 605건) 생성기.
+generate-seed.py — Task M1 목 금융 데이터(`kb_user` 10건, `account` 13건,
+`transaction` 605건) 생성기.
 
 무엇을 하는가
 -------------
-`docker/mysql/init/schema.sql`의 `INSERT INTO \`transaction\` (...) VALUES` 절에
-붙여넣을 리터럴 SQL을 표준 출력으로 만들어낸다. 605건의 `balance_after` 누적,
-`transaction_id` 대역, 급여-고정지출 순서를 손으로 맞추면 반드시 틀리기 때문에
-이 스크립트로 생성한다. Docker init 스크립트는 `.sql` 파일만 실행하므로
-(파이썬을 실행할 수 없으므로) `schema.sql`에는 이 스크립트의 출력을
-"그대로 복사해 넣은 리터럴 SQL"이 최종 산출물로 커밋되어 있다. 즉 이 스크립트를
-실행하지 않아도 `docker compose up`은 정상 동작한다 — 이 스크립트는 재생성이
-필요할 때(날짜 갱신, 사용자 추가 등)만 쓴다.
+`docker/mysql/init/schema.sql`에 그대로 붙여넣을 세 개의 `INSERT` 문
+(`kb_user`, `account`, `transaction`)을 표준 출력으로 만들어낸다. 605건의
+`balance_after` 누적, `transaction_id` 대역, 급여-고정지출 순서를 손으로
+맞추면 반드시 틀리기 때문에 이 스크립트로 생성한다. Docker init 스크립트는
+`.sql` 파일만 실행하므로(파이썬을 실행할 수 없으므로) `schema.sql`에는 이
+스크립트의 출력을 "그대로 복사해 넣은 리터럴 SQL"이 최종 산출물로 커밋되어
+있다. 즉 이 스크립트를 실행하지 않아도 `docker compose up`은 정상 동작한다 —
+이 스크립트는 재생성이 필요할 때(날짜 갱신, 사용자 추가 등)만 쓴다.
+
+`account.balance`는 손으로 고정하지 않는다. 각 계좌의 시간순 마지막 거래
+`balance_after`를 스크립트가 직접 추적해서 그 값을 `account.balance`로 쓴다
+(거래가 없는 계좌 — 저축/예금/적금 등 — 만 원래 시드 값을 유지한다). 그래야
+`account.balance`(현재 잔액)와 `transaction` 원장을 합산한 값이 항상 일치한다.
 
 사용 방법
 ---------
 표준 라이브러리(`datetime`, `random`)만 사용한다. 추가 설치 불필요.
 
     cd miraero-mock-server
-    python3 tools/generate-seed.py > /tmp/transactions_values.sql
+    python3 tools/generate-seed.py > /tmp/seed_values.sql
 
-- 표준 출력(stdout): `INSERT INTO \`transaction\` ... VALUES` 뒤에 붙일 수 있는
-  605개의 튜플 목록 (마지막 줄은 세미콜론으로 끝남). 이 내용을 그대로
-  `docker/mysql/init/schema.sql`의 `INSERT INTO \`transaction\` (...) VALUES` 아래에
-  붙여넣으면 된다.
+- 표준 출력(stdout): `INSERT INTO \`kb_user\` ... VALUES ...;`,
+  `INSERT INTO \`account\` ... VALUES ...;`, `INSERT INTO \`transaction\` ...
+  VALUES ...;` 세 문장을 순서대로 출력한다. `schema.sql`의 해당 세 블록을
+  이 출력으로 통째로 교체하면 된다.
 - 표준 에러(stderr): 사용자별/사이클별 수입·고정지출·생활비·여유자금 요약과
-  전수 sanity-check(카테고리·타입 규칙, 급여 선행, 잔액 비음수, ID 대역 미충돌)
-  통과 여부. `python3 tools/generate-seed.py 1>/dev/null`로 요약만 볼 수 있다.
-
-  `kb_user`, `account` 테이블의 INSERT는 이 스크립트가 만들지 않는다 — 브리프에
-  주어진 고정 값을 그대로 쓰므로 `schema.sql`에 리터럴로 이미 들어있다.
+  전수 sanity-check(카테고리·타입 규칙, 급여 선행, 잔액 비음수, ID 대역 미충돌,
+  계좌 최종 잔액) 통과 여부. `python3 tools/generate-seed.py 1>/dev/null`로
+  요약만 볼 수 있다.
 
 사이클 기점 날짜 갱신
 ----------------------
@@ -48,7 +52,7 @@ generate-seed.py — Task M1 목 금융 데이터(`transaction` 605건) 생성�
 import datetime
 import random
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 
 # =================================================================
 # 사이클 기점 — 이 값 하나만 바꾸면 전체 날짜가 이동한다.
@@ -67,6 +71,52 @@ def shift_months(base: datetime.date, months_before: int) -> datetime.date:
 def dt(base_date, offset, hour, minute):
     d = base_date + datetime.timedelta(days=offset)
     return datetime.datetime(d.year, d.month, d.day, hour, minute)
+
+
+def sqlval(v):
+    if v is None:
+        return 'NULL'
+    if isinstance(v, str):
+        return "'" + v.replace("'", "''") + "'"
+    return str(v)
+
+
+# =================================================================
+# kb_user / account 정적 시드 데이터 (Task M1 브리프 Step 2 값 그대로).
+# account의 balance만 아래에서 계좌별 원장 최종 balance_after로 덮어쓴다
+# (거래가 없는 계좌 — 저축/예금/적금 — 는 이 기본값을 그대로 쓴다).
+# =================================================================
+KB_USERS = [
+    (10001, '김미래', '2001-03-15', 'miraero01@test.com', 'KB금융그룹', 2850000),
+    (10002, '이초년', '2002-07-22', 'miraero02@test.com', '스타트업A', 2200000),
+    (10003, '박고소', '1997-02-10', 'miraero03@test.com', '대기업B', 5200000),
+    (10004, '최학자', '2000-11-05', 'miraero04@test.com', '중소기업C', 2600000),
+    (10005, '정월세', '2001-09-18', 'miraero05@test.com', 'IT기업D', 3000000),
+    (10006, '한본가', '2002-04-30', 'miraero06@test.com', '공공기관E', 2700000),
+    (10007, '오소비', '2001-06-12', 'miraero07@test.com', '유통사F', 2900000),
+    (10008, '신저축', '2000-01-25', 'miraero08@test.com', '금융사G', 3100000),
+    (10009, '프리랜', '1998-08-08', 'miraero09@test.com', None, 3300000),
+    (10010, '뉴가입', '2003-03-03', 'miraero10@test.com', '스타트업H', 2500000),
+]
+
+# (account_id, kb_user_id, fi_code, account_type, account_name, account_number,
+#  default_balance, status, opened_at, maturity_at, interest_rate, monthly_payment_limit)
+# default_balance는 그 계좌에 거래가 하나도 없을 때만 최종 balance로 쓰인다.
+ACCOUNTS_META = [
+    (201, 10001, '004', 'CHECKING', 'KB 입출금통장', '1001234567', 3400000, 'ACTIVE', '2023-01-10', None, '0.1000', None),
+    (202, 10001, '004', 'SAVINGS', 'KB 청년적금', '1009876543', 1200000, 'ACTIVE', '2025-06-01', '2027-06-01', '3.5000', 500000),
+    (203, 10002, '004', 'CHECKING', 'KB 입출금통장', '1002234567', 820000, 'ACTIVE', '2024-03-02', None, '0.1000', None),
+    (204, 10003, '004', 'CHECKING', 'KB 입출금통장', '1003234567', 12400000, 'ACTIVE', '2021-05-11', None, '0.1000', None),
+    (205, 10003, '004', 'DEPOSIT', 'KB 정기예금', '1003987654', 20000000, 'ACTIVE', '2025-01-05', '2027-01-05', '3.2000', None),
+    (206, 10004, '004', 'CHECKING', 'KB 입출금통장', '1004234567', 1450000, 'ACTIVE', '2023-09-14', None, '0.1000', None),
+    (207, 10005, '004', 'CHECKING', 'KB 입출금통장', '1005234567', 2100000, 'ACTIVE', '2023-04-20', None, '0.1000', None),
+    (208, 10006, '004', 'CHECKING', 'KB 입출금통장', '1006234567', 5300000, 'ACTIVE', '2024-01-08', None, '0.1000', None),
+    (209, 10007, '004', 'CHECKING', 'KB 입출금통장', '1007234567', 310000, 'ACTIVE', '2023-11-30', None, '0.1000', None),
+    (210, 10008, '004', 'CHECKING', 'KB 입출금통장', '1008234567', 4200000, 'ACTIVE', '2022-08-19', None, '0.1000', None),
+    (211, 10008, '004', 'INSTALLMENT', 'KB 목돈모으기적금', '1008987654', 3600000, 'ACTIVE', '2025-02-01', '2027-02-01', '3.8000', 600000),
+    (212, 10009, '004', 'CHECKING', 'KB 입출금통장', '1009234567', 2750000, 'ACTIVE', '2022-12-05', None, '0.1000', None),
+    (213, 10010, '004', 'CHECKING', 'KB 입출금통장', '1010234567', 640000, 'ACTIVE', '2026-07-20', None, '0.1000', None),
+]
 
 
 # ---------------------------------------------------------------
@@ -350,6 +400,7 @@ for u in users:
 # =================================================================
 all_rows = []
 summary_lines = []
+account_final_balance = {}  # account_id -> 시간순 마지막 거래의 balance_after
 
 for u in users:
     kb_user_id = u['kb_user_id']
@@ -408,6 +459,8 @@ for u in users:
         min_balance = min(min_balance, balance)
 
     all_rows.extend(rows_this_user)
+    # 이 계좌의 "현재 잔액"은 시간순 마지막 거래의 balance_after다.
+    account_final_balance[account_id] = balance
     summary_lines.append(f"user {kb_user_id} TOTAL: count={len(rows_this_user)} "
                           f"id_range=[{band_allocations[kb_user_id]}-{expected_end}] "
                           f"final_balance={balance} min_balance_seen={min_balance}")
@@ -444,24 +497,57 @@ for uid in first_income:
 neg = [r for r in all_rows if r['balance_after'] < 0]
 assert not neg, f"negative balance_after rows: {neg[:3]}"
 
+# every account_id referenced by a transaction must exist in ACCOUNTS_META
+known_account_ids = {a[0] for a in ACCOUNTS_META}
+used_account_ids = {r['account_id'] for r in all_rows}
+assert used_account_ids <= known_account_ids, f"unknown account_id in transactions: {used_account_ids - known_account_ids}"
 
-def sqlval(v):
-    if v is None:
-        return 'NULL'
-    if isinstance(v, str):
-        return "'" + v.replace("'", "''") + "'"
-    return str(v)
+# =================================================================
+# kb_user / account / transaction INSERT 문 생성
+# =================================================================
 
+kb_user_lines = []
+for (kb_user_id, name, birth_date, email, company, income) in KB_USERS:
+    line = (f"({kb_user_id}, {sqlval(name)}, {sqlval(birth_date)}, {sqlval(email)}, "
+            f"{sqlval(company)}, {income})")
+    kb_user_lines.append(line)
 
-lines = []
+account_lines = []
+account_balance_report = []
+for (account_id, kb_user_id, fi, atype, name, number, default_balance,
+     status, opened, maturity, rate, limit_) in ACCOUNTS_META:
+    balance = account_final_balance.get(account_id, default_balance)
+    has_ledger = account_id in account_final_balance
+    account_balance_report.append(
+        f"account {account_id} (user {kb_user_id}): balance={balance} "
+        f"({'ledger final balance_after' if has_ledger else 'no transactions, kept seed default'})"
+    )
+    line = (f"({account_id}, {kb_user_id}, {sqlval(fi)}, {sqlval(atype)}, {sqlval(name)}, "
+            f"{sqlval(number)}, {balance}, {sqlval(status)}, {sqlval(opened)}, {sqlval(maturity)}, "
+            f"{rate}, {sqlval(limit_)})")
+    account_lines.append(line)
+
+tx_lines = []
 for r in all_rows:
     ts_str = r['transacted_at'].strftime('%Y-%m-%d %H:%M:%S')
     line = (f"({r['tx_id']}, {r['kb_user_id']}, {r['account_id']}, NULL, NULL, '{r['ttype']}', "
             f"{r['amount']}, {r['balance_after']}, '{ts_str}', {sqlval(r['merchant'])}, {sqlval(r['category'])})")
-    lines.append(line)
+    tx_lines.append(line)
 
-# ---- stdout: 붙여넣을 SQL ----
-print(",\n".join(lines) + ";")
+# ---- stdout: 붙여넣을 SQL (kb_user -> account -> transaction 순서) ----
+print("INSERT INTO `kb_user` (`kb_user_id`, `name`, `birth_date`, `email`, `company_name`, `monthly_income`)")
+print("VALUES " + ",\n       ".join(kb_user_lines) + ";")
+print()
+print("INSERT INTO `account` (`account_id`, `kb_user_id`, `financial_institution_code`, `account_type`,")
+print("                       `account_name`, `account_number`, `balance`, `account_status`,")
+print("                       `opened_at`, `maturity_at`, `interest_rate`, `monthly_payment_limit`)")
+print("VALUES " + ",\n       ".join(account_lines) + ";")
+print()
+print("INSERT INTO `transaction` (`transaction_id`, `kb_user_id`, `account_id`, `card_id`,")
+print("                           `prepaid_instrument_id`, `transaction_type`, `amount`,")
+print("                           `balance_after`, `transacted_at`, `merchant_name`, `category_name`)")
+print("VALUES")
+print(",\n".join(tx_lines) + ";")
 
 # ---- stderr: 요약 + sanity 통과 여부 ----
 print("ALL SANITY CHECKS PASSED", file=sys.stderr)
@@ -475,3 +561,5 @@ ttypes = Counter(r['ttype'] for r in all_rows)
 print(f"TYPE COUNTS = {dict(ttypes)}", file=sys.stderr)
 print(f"BAND ALLOCATIONS = {band_allocations}", file=sys.stderr)
 print(f"CYCLE_ANCHOR = {CYCLE_ANCHOR}", file=sys.stderr)
+print("\nACCOUNT BALANCES (account.balance == ledger final balance_after):", file=sys.stderr)
+print("\n".join(account_balance_report), file=sys.stderr)

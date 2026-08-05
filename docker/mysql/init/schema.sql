@@ -253,6 +253,7 @@ CREATE TABLE `transaction` (
                                INDEX `idx_transaction_user_time`
                                    (`kb_user_id`, `transacted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 INSERT INTO `kb_user` (`kb_user_id`, `name`, `birth_date`, `email`, `company_name`, `monthly_income`)
 VALUES (10001, '김미래', '2001-03-15', 'miraero01@test.com', 'KB금융그룹', 2850000),
        (10002, '이초년', '2002-07-22', 'miraero02@test.com', '스타트업A', 2200000),
@@ -268,32 +269,19 @@ VALUES (10001, '김미래', '2001-03-15', 'miraero01@test.com', 'KB금융그룹'
 INSERT INTO `account` (`account_id`, `kb_user_id`, `financial_institution_code`, `account_type`,
                        `account_name`, `account_number`, `balance`, `account_status`,
                        `opened_at`, `maturity_at`, `interest_rate`, `monthly_payment_limit`)
-VALUES (201, 10001, '004', 'CHECKING', 'KB 입출금통장', '1001234567', 3400000, 'ACTIVE',
-        '2023-01-10', NULL, 0.1000, NULL),
-       (202, 10001, '004', 'SAVINGS', 'KB 청년적금', '1009876543', 1200000, 'ACTIVE',
-        '2025-06-01', '2027-06-01', 3.5000, 500000),
-       (203, 10002, '004', 'CHECKING', 'KB 입출금통장', '1002234567', 820000, 'ACTIVE',
-        '2024-03-02', NULL, 0.1000, NULL),
-       (204, 10003, '004', 'CHECKING', 'KB 입출금통장', '1003234567', 12400000, 'ACTIVE',
-        '2021-05-11', NULL, 0.1000, NULL),
-       (205, 10003, '004', 'DEPOSIT', 'KB 정기예금', '1003987654', 20000000, 'ACTIVE',
-        '2025-01-05', '2027-01-05', 3.2000, NULL),
-       (206, 10004, '004', 'CHECKING', 'KB 입출금통장', '1004234567', 1450000, 'ACTIVE',
-        '2023-09-14', NULL, 0.1000, NULL),
-       (207, 10005, '004', 'CHECKING', 'KB 입출금통장', '1005234567', 2100000, 'ACTIVE',
-        '2023-04-20', NULL, 0.1000, NULL),
-       (208, 10006, '004', 'CHECKING', 'KB 입출금통장', '1006234567', 5300000, 'ACTIVE',
-        '2024-01-08', NULL, 0.1000, NULL),
-       (209, 10007, '004', 'CHECKING', 'KB 입출금통장', '1007234567', 310000, 'ACTIVE',
-        '2023-11-30', NULL, 0.1000, NULL),
-       (210, 10008, '004', 'CHECKING', 'KB 입출금통장', '1008234567', 4200000, 'ACTIVE',
-        '2022-08-19', NULL, 0.1000, NULL),
-       (211, 10008, '004', 'INSTALLMENT', 'KB 목돈모으기적금', '1008987654', 3600000, 'ACTIVE',
-        '2025-02-01', '2027-02-01', 3.8000, 600000),
-       (212, 10009, '004', 'CHECKING', 'KB 입출금통장', '1009234567', 2750000, 'ACTIVE',
-        '2022-12-05', NULL, 0.1000, NULL),
-       (213, 10010, '004', 'CHECKING', 'KB 입출금통장', '1010234567', 640000, 'ACTIVE',
-        '2026-07-20', NULL, 0.1000, NULL);
+VALUES (201, 10001, '004', 'CHECKING', 'KB 입출금통장', '1001234567', 7303800, 'ACTIVE', '2023-01-10', NULL, 0.1000, NULL),
+       (202, 10001, '004', 'SAVINGS', 'KB 청년적금', '1009876543', 1200000, 'ACTIVE', '2025-06-01', '2027-06-01', 3.5000, 500000),
+       (203, 10002, '004', 'CHECKING', 'KB 입출금통장', '1002234567', 1792850, 'ACTIVE', '2024-03-02', NULL, 0.1000, NULL),
+       (204, 10003, '004', 'CHECKING', 'KB 입출금통장', '1003234567', 14628400, 'ACTIVE', '2021-05-11', NULL, 0.1000, NULL),
+       (205, 10003, '004', 'DEPOSIT', 'KB 정기예금', '1003987654', 20000000, 'ACTIVE', '2025-01-05', '2027-01-05', 3.2000, NULL),
+       (206, 10004, '004', 'CHECKING', 'KB 입출금통장', '1004234567', 2583990, 'ACTIVE', '2023-09-14', NULL, 0.1000, NULL),
+       (207, 10005, '004', 'CHECKING', 'KB 입출금통장', '1005234567', 5890890, 'ACTIVE', '2023-04-20', NULL, 0.1000, NULL),
+       (208, 10006, '004', 'CHECKING', 'KB 입출금통장', '1006234567', 7154280, 'ACTIVE', '2024-01-08', NULL, 0.1000, NULL),
+       (209, 10007, '004', 'CHECKING', 'KB 입출금통장', '1007234567', 311530, 'ACTIVE', '2023-11-30', NULL, 0.1000, NULL),
+       (210, 10008, '004', 'CHECKING', 'KB 입출금통장', '1008234567', 5737200, 'ACTIVE', '2022-08-19', NULL, 0.1000, NULL),
+       (211, 10008, '004', 'INSTALLMENT', 'KB 목돈모으기적금', '1008987654', 3600000, 'ACTIVE', '2025-02-01', '2027-02-01', 3.8000, 600000),
+       (212, 10009, '004', 'CHECKING', 'KB 입출금통장', '1009234567', 4998770, 'ACTIVE', '2022-12-05', NULL, 0.1000, NULL),
+       (213, 10010, '004', 'CHECKING', 'KB 입출금통장', '1010234567', 2535000, 'ACTIVE', '2026-07-20', NULL, 0.1000, NULL);
 
 INSERT INTO `transaction` (`transaction_id`, `kb_user_id`, `account_id`, `card_id`,
                            `prepaid_instrument_id`, `transaction_type`, `amount`,
