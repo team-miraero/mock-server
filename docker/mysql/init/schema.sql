@@ -1,3 +1,8 @@
+-- Docker entrypoint가 이 파일을 로드할 때 클라이언트 문자셋이 utf8mb4로
+-- 고정되지 않으면 한글이 이중 인코딩(double-encoding)되어 영구 손상된다.
+-- 세션 문자셋을 명시적으로 고정한다.
+SET NAMES utf8mb4;
+
 CREATE TABLE `kb_user` (
                            `kb_user_id` BIGINT NOT NULL AUTO_INCREMENT
         COMMENT 'KB 목서버 사용자 ID',
