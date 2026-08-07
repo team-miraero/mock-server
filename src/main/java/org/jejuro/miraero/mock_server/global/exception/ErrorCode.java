@@ -52,6 +52,10 @@ public enum ErrorCode {
     TOKEN_USER_MISMATCH(
             HttpStatus.FORBIDDEN,
             "토큰에 허용되지 않은 사용자의 데이터입니다."
+    ),
+    INVALID_CLIENT_SECRET(
+            HttpStatus.UNAUTHORIZED,
+            "클라이언트 인증에 실패했습니다."
     );
 
     private final HttpStatus status;
