@@ -13,3 +13,7 @@ mybatis:
 
 server:
   port: 9000
+
+mock:
+  oauth:
+    client-secret: ${MOCK_OAUTH_CLIENT_SECRET}
