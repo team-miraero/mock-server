@@ -213,9 +213,23 @@ Authorization: Bearer <accessToken>
     "accountType": "CHECKING",
     "accountName": "KB 입출금통장",
     "accountNumber": "1001234567",
-    "balance": 7303800,
+    "balance": 2480000,
     "accountStatus": "ACTIVE",
     "openedAt": "2023-01-10",
+    "maturityAt": null,
+    "interestRate": 0.1000,
+    "monthlyPaymentLimit": null
+  },
+  {
+    "accountId": 231,
+    "kbUserId": 10001,
+    "financialInstitutionCode": "004",
+    "accountType": "CHECKING",
+    "accountName": "KB 비상금통장",
+    "accountNumber": "1001345678",
+    "balance": 1200000,
+    "accountStatus": "ACTIVE",
+    "openedAt": "2023-06-15",
     "maturityAt": null,
     "interestRate": 0.1000,
     "monthlyPaymentLimit": null
@@ -223,7 +237,9 @@ Authorization: Bearer <accessToken>
 ]
 ```
 
-(위 `balance`는 실제 시드 DB에서 조회한 값 — kbUserId 10001, account_id 201 기준)
+(위 `balance`는 실제 시드 DB에서 조회한 값 — kbUserId 10001 기준. 응답은 예적금까지 포함해 4건이며 위는 입출금계좌 2건만 발췌한 것이다)
+
+모든 사용자는 입출금계좌를 2개 갖는다. 주계좌(`KB 입출금통장`)에만 급여·고정지출·생활비 거래가 흐르고, 보조계좌(`KB 비상금통장`)는 거래 없이 잔액만 보유한다.
 
 `accountType` 예시 값: `CHECKING`, `SAVINGS`, `DEPOSIT`, `INSTALLMENT` (시드 데이터 기준. DB에 별도 CHECK 제약은 없음)
 
@@ -294,35 +310,35 @@ Authorization: Bearer <accessToken>
 ```json
 [
   {
-    "transactionId": 30101,
+    "transactionId": 30163,
     "kbUserId": 10001,
     "accountId": 201,
     "cardId": null,
     "prepaidInstrumentId": null,
     "transactionType": "DEPOSIT",
     "amount": 2850000,
-    "balanceAfter": 6250000,
+    "balanceAfter": 3897270,
     "transactedAt": "2026-05-25T10:00:00",
     "merchantName": "급여",
     "categoryName": null
   },
   {
-    "transactionId": 30132,
+    "transactionId": 30164,
     "kbUserId": 10001,
     "accountId": 201,
     "cardId": null,
     "prepaidInstrumentId": null,
     "transactionType": "PAYMENT",
-    "amount": 1550,
-    "balanceAfter": 6248450,
-    "transactedAt": "2026-05-26T07:05:00",
-    "merchantName": "지하철",
-    "categoryName": "교통"
+    "amount": 16900,
+    "balanceAfter": 3880370,
+    "transactedAt": "2026-05-25T10:20:00",
+    "merchantName": "멜론",
+    "categoryName": "문화"
   }
 ]
 ```
 
-(실제 시드 DB에서 조회한 kbUserId 10001의 첫 두 건 — 3사이클 중 첫 사이클의 급여 입금과 그 다음 생활비 지출)
+(실제 시드 DB에서 조회한 kbUserId 10001의 첫 급여 입금과 그 직후 지출)
 
 `transactionType`은 스키마상 `DEPOSIT`, `WITHDRAWAL`, `PAYMENT`, `TRANSFER`, `REFUND` 5종이 허용되지만, **현재 코드가 실제로 생성하는 값은 3종뿐이다**: 시드 데이터의 `DEPOSIT`(수입)·`PAYMENT`(지출), 그리고 `/transfers` 호출로 생성되는 `TRANSFER`(계좌 간 이체). `WITHDRAWAL`·`REFUND`는 스키마상 허용되나 현재 어떤 코드 경로도 생성하지 않는다.
 
@@ -561,19 +577,33 @@ http://localhost:9000
 
 모든 계정은 `POST /mock/oauth/authorize`에 아래 이메일을 넣어 연동한다.
 
-| kbUserId | 이메일 | 월소득 | 특징 | 검증 목적 |
-| --- | --- | --- | --- | --- |
-| 10001 | miraero01@test.com | 285만 | 표준 사회초년생, 3개월치 | 기본 시나리오 |
-| 10002 | miraero02@test.com | 220만 | 저소득 | 여유자금 소액 |
-| 10003 | miraero03@test.com | 520만 | 고소득, 예금 보유 | 코호트 상위 |
-| 10004 | miraero04@test.com | 260만 | 학자금 대출상환 25만 | 고정지출에 대출 포함 |
-| 10005 | miraero05@test.com | 300만 | 월세 75만, 3개월치 | 고정지출 과다 |
-| 10006 | miraero06@test.com | 270만 | 부모 동거, 주거비 없음 | 여유자금 최대 |
-| 10007 | miraero07@test.com | 290만 | 과소비, 3개월치 | **여유자금 음수** |
-| 10008 | miraero08@test.com | 310만 | 적금·펀드 자동이체 3건 | 저축이 고정지출로 차감되는지 |
-| 10009 | miraero09@test.com | 330만 | 프리랜서, 수입 3건 | 불규칙 수입 |
-| 10010 | miraero10@test.com | 250만 | 신규 가입, 거래 5건 | **데이터 부족** |
+모든 사용자는 **동일한 기간(2026-05-01 ~ 2026-08-10)의 거래내역**과 **입출금계좌 2개**를 갖는다. 마이데이터는 서비스 가입 시점과 무관하게 은행에 쌓인 거래내역 전체를 수신하므로, 사용자별로 보유 기간이 다를 이유가 없다.
+
+| kbUserId | 이메일 | 월소득 | 예적금 | 특징 | 검증 목적 |
+| --- | --- | --- | --- | --- | --- |
+| 10001 | miraero01@test.com | 285만 | 적금·예금 | 표준 사회초년생 | 기본 시나리오 |
+| 10002 | miraero02@test.com | 220만 | 적금 | 저소득 | 여유자금 소액 |
+| 10003 | miraero03@test.com | 520만 | 예금·적금 | 고소득 | 코호트 상위 |
+| 10004 | miraero04@test.com | 260만 | 적금 | 학자금 대출상환 25만 | 고정지출에 대출 포함 |
+| 10005 | miraero05@test.com | 300만 | 적금 | 월세 75만 | 고정지출 과다 |
+| 10006 | miraero06@test.com | 270만 | 적금 | 부모 동거, 주거비 없음 | 소득 대비 여유 큼 |
+| 10007 | miraero07@test.com | 290만 | 적금 | 과소비 | **사이클 기준 여유자금 음수** |
+| 10008 | miraero08@test.com | 310만 | 적금·예금 | 적금·펀드 자동이체 3건 | 저축이 고정지출로 차감되는지 |
+| 10009 | miraero09@test.com | 330만 | 적금 | 프리랜서, 수입 3건 | **급여일 역추론 실패 → 폴백 경로** |
+| 10010 | miraero10@test.com | 250만 | **없음** | 신규 가입, 저축 안 함 | **목표에 연결할 자산 없음** |
+| 10011 | miraero11@test.com | 240만 | 적금 | 이번 달 예산 소진 | **여유자금 정확히 0원** |
 
 10001·10002·10004·10006·10007은 연령·소득 구간이 겹쳐 또래평균 코호트를 형성한다.
 
-각 계좌의 상세(계좌번호·잔액 등)는 `docker/mysql/init/schema.sql`의 시드 데이터, 또는 `tools/generate-seed.py` 상단 `CYCLE_ANCHOR` 값을 바꿔 재생성한 결과를 참고한다.
+**여유자금은 조회 시점에 따라 달라진다.** 백엔드는 `마지막 급여일 ~ 다음 급여일` 구간으로 계산하는데, 시드 데이터가 8/10에서 끊기므로 현재 주기(7/25~8/25)는 절반만 채워져 있다. 그래서 사이클 전체로는 여유자금이 음수인 10007도 **지금 조회하면 +81만원**으로 나온다. "쓸 돈이 하나도 남지 않은" 화면을 보려면 10011을 쓴다 (현재 주기 기준 정확히 0원).
+
+| kbUserId | 현재 주기(7/25~) 기준 | 한 사이클(6/25~7/24) 기준 |
+| --- | --- | --- |
+| 10011 김빠듯 | **0** | 108,070 |
+| 10002 이초년 | 544,110 | 100,700 |
+| 10004 최학자 | 725,510 | 780 |
+| 10010 뉴가입 | 794,680 | -32,140 |
+| 10007 오소비 | 810,610 | **-183,260** |
+| 10003 박고소 | 2,101,640 | 789,120 |
+
+각 계좌의 상세(계좌번호·잔액 등)는 `docker/mysql/init/schema.sql`의 시드 데이터, 또는 `tools/generate-seed.py` 상단 `DATA_START`/`DATA_END` 값을 바꿔 재생성한 결과를 참고한다.
