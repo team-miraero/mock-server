@@ -46,10 +46,13 @@ tasks.named('test') {
 	useJUnitPlatform()
 }
 
-// .env는 docker compose만 자동으로 읽으므로, bootRun에서도 같은 값을 쓰도록 직접 로드한다
+// Docker Compose reads .env automatically; bootRun loads local env files explicitly.
 tasks.named('bootRun') {
-	def envFile = file("${rootDir}/.env")
-	if (envFile.exists()) {
+	[file("${rootDir}/.env"), file("${rootDir}/.env.local")].each { envFile ->
+		if (!envFile.exists()) {
+			return
+		}
+
 		envFile.readLines().each { line ->
 			def trimmed = line.trim()
 			if (trimmed && !trimmed.startsWith('#') && trimmed.contains('=')) {
