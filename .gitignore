@@ -38,7 +38,9 @@ out/
 
 ### Environment ###
 .env
-application.properties
+.env.*
+!.env.example
+/application.properties
 
 ### OS ###
 .DS_Store
