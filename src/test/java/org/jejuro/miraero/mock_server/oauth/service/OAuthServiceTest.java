@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import java.time.LocalDate;
+
 import org.jejuro.miraero.mock_server.global.exception.BusinessException;
 import org.jejuro.miraero.mock_server.kbuser.domain.KbUser;
 import org.jejuro.miraero.mock_server.kbuser.mapper.KbUserMapper;
@@ -36,18 +38,41 @@ class OAuthServiceTest {
     }
 
     @Test
-    @DisplayName("인증코드를 발급하고 토큰으로 교환하면 kbUserId를 반환한다")
+    @DisplayName("인증코드를 발급하고 토큰으로 교환하면 kbUserId와 프로필을 반환한다")
     void issueAndExchange() {
         KbUser kbUser = new KbUser();
         ReflectionTestUtils.setField(kbUser, "kbUserId", KB_USER_ID);
+        ReflectionTestUtils.setField(kbUser, "name", "김미래");
+        ReflectionTestUtils.setField(kbUser, "birthDate", LocalDate.of(2001, 3, 15));
+        ReflectionTestUtils.setField(kbUser, "monthlyIncome", 2_850_000L);
+        ReflectionTestUtils.setField(kbUser, "companyName", "KB금융그룹");
         when(kbUserMapper.findByEmail(EMAIL)).thenReturn(kbUser);
+        when(kbUserMapper.findById(KB_USER_ID)).thenReturn(kbUser);
 
         String code = oAuthService.issueAuthorizationCode(EMAIL);
         TokenResponse token = oAuthService.exchangeToken(code);
 
         assertThat(token.getKbUserId()).isEqualTo(KB_USER_ID);
         assertThat(token.getAccessToken()).isNotBlank();
+        assertThat(token.getName()).isEqualTo("김미래");
+        assertThat(token.getBirthDate()).isEqualTo(LocalDate.of(2001, 3, 15));
+        assertThat(token.getMonthlyIncome()).isEqualTo(2_850_000L);
+        assertThat(token.getCompanyName()).isEqualTo("KB금융그룹");
         assertThat(oAuthService.resolveKbUserId(token.getAccessToken())).isEqualTo(KB_USER_ID);
+    }
+
+    @Test
+    @DisplayName("인증코드는 있으나 kb_user가 삭제된 경우 예외가 발생한다")
+    void exchange_kbUserNotFound() {
+        KbUser kbUser = new KbUser();
+        ReflectionTestUtils.setField(kbUser, "kbUserId", KB_USER_ID);
+        when(kbUserMapper.findByEmail(EMAIL)).thenReturn(kbUser);
+        when(kbUserMapper.findById(KB_USER_ID)).thenReturn(null);
+
+        String code = oAuthService.issueAuthorizationCode(EMAIL);
+
+        assertThatThrownBy(() -> oAuthService.exchangeToken(code))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test
@@ -65,6 +90,7 @@ class OAuthServiceTest {
         KbUser kbUser = new KbUser();
         ReflectionTestUtils.setField(kbUser, "kbUserId", KB_USER_ID);
         when(kbUserMapper.findByEmail(EMAIL)).thenReturn(kbUser);
+        when(kbUserMapper.findById(KB_USER_ID)).thenReturn(kbUser);
 
         String code = oAuthService.issueAuthorizationCode(EMAIL);
         oAuthService.exchangeToken(code);
