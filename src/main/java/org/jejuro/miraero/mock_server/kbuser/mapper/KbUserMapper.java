@@ -8,4 +8,6 @@ import org.jejuro.miraero.mock_server.kbuser.domain.KbUser;
 public interface KbUserMapper {
 
     KbUser findByEmail(@Param("email") String email);
+
+    KbUser findById(@Param("kbUserId") Long kbUserId);
 }
