@@ -44,10 +44,20 @@ public class OAuthService {
         String accessToken = UUID.randomUUID().toString();
         oAuthStore.saveAccessToken(accessToken, kbUserId, accessTokenTtlSeconds);
 
+        // authorizationCode에는 kbUserId만 실려 있어 프로필은 여기서 다시 조회한다
+        KbUser kbUser = kbUserMapper.findById(kbUserId);
+        if (kbUser == null) {
+            throw new BusinessException(ErrorCode.KB_USER_NOT_FOUND);
+        }
+
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .expiresIn(accessTokenTtlSeconds)
                 .kbUserId(kbUserId)
+                .name(kbUser.getName())
+                .birthDate(kbUser.getBirthDate())
+                .monthlyIncome(kbUser.getMonthlyIncome())
+                .companyName(kbUser.getCompanyName())
                 .build();
     }
 

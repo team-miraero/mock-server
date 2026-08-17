@@ -9,4 +9,11 @@
         FROM kb_user
         WHERE email = #{email}
     </select>
+
+    <select id="findById"
+            resultType="org.jejuro.miraero.mock_server.kbuser.domain.KbUser">
+        SELECT kb_user_id, name, birth_date, email, company_name, monthly_income
+        FROM kb_user
+        WHERE kb_user_id = #{kbUserId}
+    </select>
 </mapper>
